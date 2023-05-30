@@ -1,0 +1,118 @@
+clear 
+import delimited scorecard.csv
+
+sort opeid year
+by opeid year: drop if _n>1
+tsset opeid year
+ 
+
+
+preserve
+keep if year ==2011
+destring parentrecipients, force replace
+gen perc_plus_pre = parentrecipients/num_full
+destring parentrecipients, force replace
+
+destring unsubrecipient, force replace
+destring subrecipient, force replace
+
+gen perc_sub_pre = subrecipients/num_full
+gen perc_unsub_pre = unsubrecipien/num_full
+
+duplicates drop opeid year, force
+
+keep perc_plus_pre perc_unsub_pre  perc_sub_pre  opeid
+save plus_pre, replace
+restore 
+merge m:1 opeid using plus_pre
+drop _m
+
+encode state, gen(state2) 
+
+#
+
+ADM_RATE
+
+preserve
+keep if year ==2010
+keep inexpfte  opeid
+rename inexpfte inexpfte_2011
+duplicates drop opeid year, force
+save data_2011, replace
+restore
+drop _m
+merge m:1 opeid using data_2011
+drop _m
+
+
+% engineering
+% english lit 
+
+
+gen ugds_ratio = ugds_x /ugds_2011
+
+AVGFACSAL
+COSTT4_A
+TUITFTE
+AVGFACSAL
+INEXPFTE
+xtreg  pctpell ib2011.year##c.perc_plus_pre     , fe cluster(opeid)
+
+PFTFAC
+
+xtreg  pctpell ib2011.year##c.perc_plus_pre  i.year##i.state2 , fe cluster(opeid)
+
+SCHTYPE
+
+prgmofr
+gen p_norm =prgmofr  /prgmofr_2011
+xtreg  p_norm ib2011.year##c.perc_plus_pre  if  prgmofr <=25 if, fe cluster(opeid)
+PCTFLOAN
+INEXPFTE
+
+
+AVGFACSAL
+
+xtreg pftfac ib2010.year##c.perc_plus_pre  i.year##i.state2  if  avgfacsal<=12035 , fe cluster(opeid)
+
+
+
+
+coefplot, vertical keep(*.year#*.perc_plus_pre) recast(connected) lc(black) mcolor(black) offset(0) omitted baselevels xlabel( 1 "2007" 2 "2008" 3 "2009"  4 "2010" 5 "2011" 6 "2012" 7 "2013" 8 "2014" 9 "2015")  ciopts(recast(rcap) lc(black) lp(-)) xtitle("") xline(5, lc(black) lpattern(dash)) graphregion(color(none)) title("Enrollment Relative to 2011")
+graph export enroll.pdf, replace 
+
+clear 
+import delimited /disk/homedirs/nber/cre2114/equifax_scratch/equifax/sc4331/universities/staff.csv
+
+merge m:1 opeid using plus_pre
+
+
+
+python3
+import pandas as pd 
+
+from bs4 import BeautifulSoup
+
+import requests
+r  = requests.get("https://nces.ed.gov/ipeds/datacenter/DataFiles.aspx?year=2012&surveyNumber=-1")
+data = r.text
+soup = BeautifulSoup(data)
+
+for link in soup.find_all('a'):
+    print(link.get('href'))
+    
+import urllib2
+response = urllib2.urlopen('https://nces.ed.gov/ipeds/datacenter/DataFiles.aspx?year=2012&surveyNumber=-1/data/EF2012B.zip')
+fixBadZipfile("https://nces.ed.gov/ipeds/datacenter/DataFiles.aspx?year=2012&surveyNumber=-1/data/EF2012B.zip")
+
+
+def fixBadZipfile(zipFile):  
+ f = open(zipFile, 'r+b')  
+ data = f.read()  
+ pos = data.find('\x50\x4b\x05\x06') # End of central directory signature  
+ if (pos > 0):  
+     self._log("Trancating file at location " + str(pos + 22)+ ".")  
+     f.seek(pos + 22)   # size of 'ZIP end of central directory record' 
+     f.truncate()  
+     f.close()  
+  else:  
