@@ -72,8 +72,9 @@ INEXPFTE
 
 
 AVGFACSAL
-
-xtreg pftfac ib2010.year##c.perc_plus_pre  i.year##i.state2  if  avgfacsal<=12035 , fe cluster(opeid)
+PCIP09
+FSEND_5
+xtreg  d_pctpell ib2010.year##c.perc_plus_pre  i.year##i.state2  , fe cluster(opeid)
 
 
 
